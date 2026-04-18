@@ -241,4 +241,30 @@ int Keypad_WhichKeyIsPressed(void) {
 	return -1;
 }
 
+uint8_t Return_ValidKeyPressLCD(void){
+
+	uint8_t flag = 0;
+	uint8_t lcd_Char;
+
+	while(flag != 1){
+		if( Keypad_IsAnyKeyPressed() ){
+
+				  int key = Keypad_WhichKeyIsPressed();
+
+				  if( key != 0xF && key !=-1 ){
+					  flag++;
+					  switch( key ){
+						  case 0xA: lcd_Char = 0x2A; break;
+						  case 0xB: lcd_Char = 0x23; break;
+						  default: lcd_Char = '0' + key; break;
+					  }
+				  }
+
+		}
+
+	}
+	return lcd_Char;
+
+}
+
 
