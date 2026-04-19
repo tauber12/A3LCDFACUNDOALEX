@@ -41,23 +41,13 @@ int main(void)
 
   while (1)
   {
-	  while( (Return_ValidKeyPressLCD() =! '*') ){
+	    while( (Return_ValidKeyPressLCD() != '*') ){
 		  //wait for initial star press
 	  }
-    uint8_t press_count=0;//to track number of user inputs
-    uint8_t LCD_in[4]={}; //array to store button press input 
-    //prompt 4 user inputs here
-    while(press_count<4);//to store 4 inputs
-    {
-      LCD_in[press_count]= Return_ValidKeyPressLCD();
-      if(LCD_in[press_count]='*'){
-        break;}
-      else
-      {
-      //call function to update LCD with each button press
-      press_count++;
-      }
-    }
+
+    Prompt_user_4_numbers();
+    Wait_for_4_User_Digits();
+
     //after 4 user inputs, parse them and update LCD if needed
     //MAKE THIS INTO A FUNCTION IN LCD.C PROBABLY
     minutes= ((LCD_in[3]*10)+(LCD_in[2]));

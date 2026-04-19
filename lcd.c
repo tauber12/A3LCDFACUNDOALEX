@@ -50,6 +50,8 @@ void LCD_init( void )  {   // RCC & GPIO config removed - leverage A1, A2 code
       LCD_4b_command( 0x30 );             // HI 4b of 8b cmd, low nibble = X
       delay_us( 200 );
    }
+
+   //full LCD initialization
    LCD_4b_command( 0x20 ); // fcn set #4: 4b cmd set 4b mode - next 0x28:2-line
    delay_us( 40 );
    LCD_command( 0x28 ); // fcn set: 8b cmd set 2 - line
@@ -105,7 +107,7 @@ void LCD_write_char( uint8_t letter )  {
 
 void LCD_write_string( char string[] ) {
 
-	for(uint8_t idx = 0; idx < strlen(string); idx++){
+	for( uint8_t idx = 0; idx < strlen(string); idx++ ){
 		LCD_write_char(string[idx]);
 		delay_us( 5 );
 	}
@@ -114,17 +116,79 @@ void LCD_write_string( char string[] ) {
 
 void LCD_set_cursor( uint8_t row, uint8_t column) {
 
-		uint8_t addr = (row == 1) ? ( 0x40 + column ) : column;
-		LCD_command( 0x80 | addr );
+	uint8_t addr = (row == 1) ? ( 0x40 + column ) : column;
+	LCD_command( 0x80 | addr );
 
 }
 
-void LCD_write_intro_message() {
+void LCD_write_intro_message( void ) {
 	LCD_set_cursor(0, 0);
 	LCD_write_string("EE 329 A3 TIMER ");
 	LCD_set_cursor(1,0);
 	LCD_write_string("*=SET #=GO 00:00");
 	LCD_set_cursor(0,0);
 }
+
+void Prompt_user_4_numbers( void ){
+	LCD_set_cursor(0, 0);
+	LCD_write_string("ENTER 4 DIGITS: ");
+	LCD_set_cursor(1,0);
+	LCD_write_string("MM:SS  ->  XX:XX");
+	LCD_set_cursor(1,11);
+}
+
+void Update_entered_numbers( uint8_t nums[] , uint8_t currentCnt ){
+	LCD_set_cursor(1,11);
+	delay_us(50);
+	switch(currentCnt){
+
+		case 1: 	LCD_write_char(nums[currentCnt-1]); break;
+		case 2:  LCD_set_cursor(1,12);
+					LCD_write_char(nums[currentCnt-1]); break;
+		case 3:  LCD_set_cursor(1,14);
+					LCD_write_char(nums[currentCnt-1]); break;
+		case 4:  LCD_set_cursor(1,15);
+					LCD_write_char(nums[currentCnt-1]); break;
+		default: break;
+	}
+}
+
+void Wait_for_4_User_Digits(){
+
+   uint8_t press_Cnt = 0; //to track number of user inputs
+   uint8_t lcd_In[ 4 ] = {}; //array to store button press inputs
+
+	while(  press_Cnt < 4 ) { //to store 4 inputs
+
+		lcd_In[ press_Cnt ]= Return_ValidKeyPressLCD();
+
+		if( lcd_In[ press_Cnt] == '*' ){
+			//reset digit array and press_Cnt
+			press_Cnt = 0;
+			memset(lcd_In, 0, sizeof(lcd_In));
+			Prompt_user_4_numbers();
+			continue;
+
+		}
+
+		else if (lcd_In[press_Cnt] == '#') continue; // ignore or handle GO press during input
+
+		else {
+			//call function to update LCD with each button press
+			press_Cnt++;
+			delay_us(1000);
+			Update_entered_numbers( lcd_In,  press_Cnt);
+
+			if( press_Cnt == 2){
+				LCD_set_cursor(1,14);
+			}
+			while( Keypad_IsAnyKeyPressed() != 0 ){} //wait until button released to continue loop;
+		}
+
+	}
+
+}
+
+
 
 
