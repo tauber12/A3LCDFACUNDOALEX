@@ -62,17 +62,32 @@ int main(void)
       press_count++;
       }
     }
+
     //after 4 user inputs, parse them and update LCD if needed
     uint8_t countbegin=0;
     uint8_t countdone=0;//flag for when countdown is finished
     countbegin=return_ValidKeyPressLCD();
-    if(countbegin = '*'){
+    if(countbegin = '*')
+    {
       break;
     }
     else
     {
       while(countdone=0){//countdown loop
-      //do systick timer delay
+      uint8_t countbreak=0; 
+      if(Keypad_IsAnyKeyPressed()){//check if star key is pressed
+				  countbreak = Keypad_WhichKeyIsPressed();}
+      else{}//nop
+      if(countbreak== '*'){
+          break;
+        }
+      else{
+        //do systick timer delay here
+      //if minutes count >0 decrement minutes
+      //else if seconds count >0 decrement seconds
+      //update LCD after either one
+      //else countdone=1
+        }
       }
     }
     }
