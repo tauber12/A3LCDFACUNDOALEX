@@ -140,12 +140,12 @@ int main(void)
         LCD_set_cursor(1,11);
         LCD_write_char(inputtedDigits[0]);
 
-		  case STATE_DONE:
-        //turn on LED
+		  case STATE_DONE:       
+        LED_PORT->BSRR = 0x10//turn on LED
         while(1){
 				  if( Return_ValidKeyPressLCD() == '#' || Return_ValidKeyPressLCD() == '*')
           {
-            //turn off LED
+            LED_PORT -> BRR =0xFF;//turn off LED
 					  state =  STATE_ENTER_DIGITS;
 					  break;
 				  } 
