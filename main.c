@@ -141,7 +141,7 @@ int main(void)
         LCD_write_char(inputtedDigits[0]);
 
 		  case STATE_DONE:       
-        LED_PORT->BSRR = 0x10//turn on LED
+        LED_PORT->BSRR = 0x10;//turn on LED
         while(1){
 				  if( Return_ValidKeyPressLCD() == '#' || Return_ValidKeyPressLCD() == '*')
           {
