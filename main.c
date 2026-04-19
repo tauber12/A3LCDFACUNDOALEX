@@ -51,7 +51,7 @@ int main(void)
     uint8_t press_count=0;//to track number of user inputs
     uint8_t LCD_in[4]={}; //array to store button press input 
     //prompt 4 user inputs here
-    while(press_count<5);//to store 4 inputs
+    while(press_count<4);//to store 4 inputs
     {
       LCD_in[press_count]= Return_ValidKeyPressLCD();
       if(LCD_in[press_count]='*'){
@@ -62,8 +62,38 @@ int main(void)
       press_count++;
       }
     }
-
     //after 4 user inputs, parse them and update LCD if needed
+    minutes= ((LCD_in[3]*10)+(LCD_in[2]));
+    seconds= ((LCD_in[1]*10)+(LCD_in[0]));
+    parse_flag=0;
+    if(minutes > 59)
+      {
+        minutes =59;
+        parse_flag=1;
+      }
+    else
+     {
+      //nop
+     }
+    if(seconds > 59)
+     {
+      seconds = 59;
+      parse_flag=1;
+     }
+    else
+      {
+      //nop
+      }
+    if (parse_flag=1)
+      {
+      uint8_t parsed_LCD_in[4]={};
+      }
+    else
+      {
+        //nop
+      }
+
+    //initalize countdown logic
     uint8_t countbegin=0;
     uint8_t countdone=0;//flag for when countdown is finished
     countbegin=return_ValidKeyPressLCD();
@@ -78,11 +108,12 @@ int main(void)
       if(Keypad_IsAnyKeyPressed()){//check if star key is pressed
 				  countbreak = Keypad_WhichKeyIsPressed();}
       else{}//nop
+      
       if(countbreak== '*'){
           break;
         }
       else{
-        //do systick timer delay here
+      //do systick timer delay here
       //if minutes count >0 decrement minutes
       //else if seconds count >0 decrement seconds
       //update LCD after either one
