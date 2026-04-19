@@ -17,7 +17,7 @@
 #define LCD_RS 0x40
 #define LCD_DATA_BITS 0xF
 
-//function protoypes
+//function prototypes
 void LED_Config( void );
 void LCD_init( void );
 void LCD_pulse_ENA( void );
@@ -27,6 +27,10 @@ void LCD_write_char( uint8_t letter );
 void LCD_write_string( char string[] );
 void LCD_set_cursor( uint8_t row, uint8_t column);
 void LCD_write_intro_message( );
+void Prompt_user_4_numbers( void );
+void Update_entered_numbers( uint8_t nums[4] , uint8_t currentCnt);
+void Wait_for_4_User_Digits( uint8_t lcd_In[4] );
+
 
 
 #endif /* INC_LCD_H_ */

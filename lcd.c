@@ -7,6 +7,7 @@
 
 #include "lcd.h"
 #include "delay.h"
+#include "keypad.h"
 
 void LED_Config(void){
 
@@ -137,7 +138,7 @@ void Prompt_user_4_numbers( void ){
 	LCD_set_cursor(1,11);
 }
 
-void Update_entered_numbers( uint8_t nums[] , uint8_t currentCnt ){
+void Update_entered_numbers( uint8_t nums[4] , uint8_t currentCnt ){
 	LCD_set_cursor(1,11);
 	delay_us(50);
 	switch(currentCnt){
@@ -153,25 +154,25 @@ void Update_entered_numbers( uint8_t nums[] , uint8_t currentCnt ){
 	}
 }
 
-void Wait_for_4_User_Digits(){
+void Wait_for_4_User_Digits(uint8_t lcd_In[4]){
 
    uint8_t press_Cnt = 0; //to track number of user inputs
-   uint8_t lcd_In[ 4 ] = {}; //array to store button press inputs
+	memset( lcd_In, 0, sizeof(lcd_In) ); //clear input array
 
 	while(  press_Cnt < 4 ) { //to store 4 inputs
 
-		lcd_In[ press_Cnt ]= Return_ValidKeyPressLCD();
+		lcd_In[ press_Cnt ] = Return_ValidKeyPressLCD();
 
 		if( lcd_In[ press_Cnt] == '*' ){
 			//reset digit array and press_Cnt
 			press_Cnt = 0;
-			memset(lcd_In, 0, sizeof(lcd_In));
+			memset( lcd_In, 0, sizeof(lcd_In) );
 			Prompt_user_4_numbers();
 			continue;
 
 		}
 
-		else if (lcd_In[press_Cnt] == '#') continue; // ignore or handle GO press during input
+		else if ( lcd_In[press_Cnt] == '#' ) continue; // ignore or handle GO press during input
 
 		else {
 			//call function to update LCD with each button press
@@ -186,6 +187,11 @@ void Wait_for_4_User_Digits(){
 		}
 
 	}
+	LCD_set_cursor(0,0);
+	LCD_write_string("# -> BEGIN      ");
+	LCD_set_cursor(1,0);
+	LCD_write_string("* -> RESET");
+	LCD_set_cursor(1,16);
 
 }
 

@@ -29,6 +29,14 @@ void SystemClock_Config(void);
   * @brief  The application entry point.
   * @retval int
   */
+
+typedef enum { //create states for FSM logic to aid  constant '*" checks
+    STATE_CHECKKEYPRESS,
+    STATE_ENTER_DIGITS,
+    STATE_TIMER,
+    STATE_DONE
+} State_t;
+
 int main(void)
 {
   //sys intialization
@@ -36,91 +44,70 @@ int main(void)
   SystemClock_Config();
   LCD_init();
   Keypad_Config();
-  LCD_write_intro_message();
-  uint8_t pastKey;
 
-  while (1)
+  State_t state = STATE_CHECKKEYPRESS; // initialize first state
+  uint8_t inputtedDigits[4]; //create uint8_t array to store user inputs
+
+  LCD_write_intro_message(); // EE329 A3 TIMER message
+
+  while (1) //loop indefinitely
   {
-	    while( (Return_ValidKeyPressLCD() != '*') ){
-		  //wait for initial star press
-	  }
+	  delay_us(1000);
+	  switch(state){ //decode current state
 
-    Prompt_user_4_numbers();
-    Wait_for_4_User_Digits();
+	  	  case STATE_CHECKKEYPRESS: //check for keypress in this state
 
-    //after 4 user inputs, parse them and update LCD if needed
-    //MAKE THIS INTO A FUNCTION IN LCD.C PROBABLY
-    minutes= ((LCD_in[3]*10)+(LCD_in[2]));
-    seconds= ((LCD_in[1]*10)+(LCD_in[0]));
-    parse_flag=0;
-    if(minutes > 59)
-      {
-        minutes =59;
-        parse_flag=1;
-      }
-    else
-     {
-      //nop
-     }
-    if(seconds > 59)
-     {
-      seconds = 59;
-      parse_flag=1;
-     }
-    else
-      {
-      //nop
-      }
-    if (parse_flag=1)
-      {
-        //update MM:SS array here
-        //call function to update LCD
-      }
-    else
-      {
-        //nop
-      }
+	  		  state =  (Return_ValidKeyPressLCD() == '*') ? STATE_ENTER_DIGITS : STATE_CHECKKEYPRESS; //wait for initial "*' press
+	  		  break;
 
-    //initalize countdown logic
-    uint8_t countbegin=0;
-    uint8_t countdone=0;//flag for when countdown is finished
-    countbegin=return_ValidKeyPressLCD();
-    if(countbegin = '*')
-    {
-      break;
+		  case STATE_ENTER_DIGITS:  //prompt for timer digits, cap if above 59:59
+
+			  Prompt_user_4_numbers();
+			  Wait_for_4_User_Digits(inputtedDigits);
+
+			  if( inputtedDigits[0] > '5' && inputtedDigits[2] > '5' ) {
+			      inputtedDigits[0] = '5';
+			      inputtedDigits[1] = '9';
+			      inputtedDigits[2] = '5';
+			      inputtedDigits[2] = '9';
+			      LCD_set_cursor(1, 11);
+			      LCD_write_string("59");
+			      LCD_set_cursor(1, 14);
+			      LCD_write_string("59");
+
+			  } else if( inputtedDigits[0] > '5' ) {
+				    inputtedDigits[0] = '5';
+				    inputtedDigits[1] = '9';
+			      LCD_set_cursor(1, 11);
+			      LCD_write_string("59");
+
+			  } else if( inputtedDigits[2] > '5' ) {
+				    inputtedDigits[2] = '5';
+				    inputtedDigits[3] = '9';
+			      LCD_set_cursor(1, 14);
+			      LCD_write_string("59");
+			  }
+
+			  while(1){
+				  if( Return_ValidKeyPressLCD() == '#' ){
+					  state =  STATE_TIMER;
+					  break;
+				  } else if( Return_ValidKeyPressLCD() == '*' ){
+					  state = STATE_ENTER_DIGITS;
+				  	  break;
+			  	  }
+			  }
+
+		  case STATE_TIMER:
+		  case STATE_DONE:
+	   }
+
     }
-    else
-    {
-      while(countdone=0){//countdown loop
-      uint8_t countbreak=0; 
-      if(Keypad_IsAnyKeyPressed()){//check if star key is pressed
-				  countbreak = Keypad_WhichKeyIsPressed();}
-      else{}//nop
-      
-      if(countbreak== '*'){
-          break;
-        }
-      else{
-      //do systick timer delay here
-      //case: seconds count >0
-      //      decrement seconds
-      //case: seconds count =0 && minutes count > 0
-      //      decrement minutes count & set seconds count to 59
-      //      update LCD
-      //update LCD after either case
-      //case: seconds count = 0 && minutes count = 0
-      //      countdone = 1;
-        }
-      }
-      //while the #key is not pressed, leave the LED on
-      //end of LOOP after # key is pressed
-    }
-    }
-	  delay_us(10000);
+
     /* USER CODE BEGIN 3 */
-  }
+ }
   /* USER CODE END 3 */
-}
+
 
 /**
   * @brief System Clock Configuration
