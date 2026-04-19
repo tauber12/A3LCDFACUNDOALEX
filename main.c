@@ -145,7 +145,7 @@ int main(void)
         while(1){
 				  if( Return_ValidKeyPressLCD() == '#' || Return_ValidKeyPressLCD() == '*')
           {
-            LED_PORT -> BRR =0xFF;//turn off LED
+            LED_PORT -> BRR =0x10;//turn off LED
 					  state =  STATE_ENTER_DIGITS;
 					  break;
 				  } 
