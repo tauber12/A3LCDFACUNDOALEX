@@ -104,7 +104,7 @@ int main(void)
 		  case STATE_TIMER:
         delay_us(250000); //delay for about 1 second
         if(inputtedDigits[0]=='0' && inputtedDigits[1]=='0' 
-                && inputtedDigits[2]=='0' && inputtedDigits[3]=='0')
+          && inputtedDigits[2]=='0' && inputtedDigits[3]=='0')
         {
           state= STATE_DONE;
           break;
@@ -131,10 +131,17 @@ int main(void)
           inputtedDigits[2]='5';//set seconds to 59
           inputtedDigits[3]='9';
         }
-        //update LCD display
+        LCD_set_cursor(1,15); //update LCD with new coutdown time
+        LCD_write_char(inputtedDigits[3]);
+        LCD_set_cursor(1,14);
+        LCD_write_char(inputtedDigits[2]);
+        LCD_set_cursor(1,12);
+        LCD_write_char(inputtedDigits[1]);
+        LCD_set_cursor(1,11);
+        LCD_write_char(inputtedDigits[0]);
 
 		  case STATE_DONE:
-        //output to LED
+        //turn on LED
         while(1){
 				  if( Return_ValidKeyPressLCD() == '#' || Return_ValidKeyPressLCD() == '*')
           {
@@ -151,7 +158,6 @@ int main(void)
 
     }
  }
-
 
 
 /**
