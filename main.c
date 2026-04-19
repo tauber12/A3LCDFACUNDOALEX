@@ -24,10 +24,6 @@
 
 
 void SystemClock_Config(void);
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-	uint8_t pastKey;
-/* USER CODE END 0 */
 
 /**
   * @brief  The application entry point.
@@ -41,7 +37,7 @@ int main(void)
   LCD_init();
   Keypad_Config();
   LCD_write_intro_message();
-  
+  uint8_t pastKey;
 
   while (1)
   {
@@ -116,12 +112,18 @@ int main(void)
         }
       else{
       //do systick timer delay here
-      //if minutes count >0 decrement minutes
-      //else if seconds count >0 decrement seconds
-      //update LCD after either one
-      //else countdone=1
+      //case: seconds count >0
+      //      decrement seconds
+      //case: seconds count =0 && minutes count > 0
+      //      decrement minutes count & set seconds count to 59
+      //      update LCD
+      //update LCD after either case
+      //case: seconds count = 0 && minutes count = 0
+      //      countdone = 1;
         }
       }
+      //while the #key is not pressed, leave the LED on
+      //end of LOOP after # key is pressed
     }
     }
 	  delay_us(10000);
