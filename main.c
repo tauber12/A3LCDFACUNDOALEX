@@ -22,12 +22,8 @@
 #include "keypad.h"
 #include "delay.h"
 
-/* Private function prototypes -----------------------------------------------*/
+
 void SystemClock_Config(void);
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
-
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 	uint8_t pastKey;
@@ -39,27 +35,48 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
+  //sys intialization
   HAL_Init();
   SystemClock_Config();
-
-  /* USER CODE BEGIN 2 */
-
   LCD_init();
   Keypad_Config();
   LCD_write_intro_message();
+  
 
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
 	  while( (Return_ValidKeyPressLCD() =! '*') ){
 		  //wait for initial star press
 	  }
-
-	  delay_us(1000);
+    uint8_t press_count=0;//to track number of user inputs
+    uint8_t LCD_in[4]={}; //array to store button press input 
+    //prompt 4 user inputs here
+    while(press_count<5);//to store 4 inputs
+    {
+      LCD_in[press_count]= Return_ValidKeyPressLCD();
+      if(LCD_in[press_count]='*'){
+        break;}
+      else
+      {
+      //call function to update LCD with each button press
+      press_count++;
+      }
+    }
+    //after 4 user inputs, parse them and update LCD if needed
+    uint8_t countbegin=0;
+    uint8_t countdone=0;//flag for when countdown is finished
+    countbegin=return_ValidKeyPressLCD();
+    if(countbegin = '*'){
+      break;
+    }
+    else
+    {
+      while(countdone=0){//countdown loop
+      //do systick timer delay
+      }
+    }
+    }
+	  delay_us(10000);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
