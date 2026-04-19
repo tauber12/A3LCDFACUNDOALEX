@@ -22,7 +22,6 @@
 #include "keypad.h"
 #include "delay.h"
 
-
 void SystemClock_Config(void);
 
 /**
@@ -44,6 +43,7 @@ int main(void)
   SystemClock_Config();
   LCD_init();
   Keypad_Config();
+  SysTick_Init();
 
   State_t state = STATE_CHECKKEYPRESS; // initialize first state
   uint8_t inputtedDigits[4]; //create uint8_t array to store user inputs
@@ -89,24 +89,69 @@ int main(void)
 			  }
 
 			  while(1){
-				  if( Return_ValidKeyPressLCD() == '#' ){
+				  if( Return_ValidKeyPressLCD() == '#' )
+          {
 					  state =  STATE_TIMER;
 					  break;
-				  } else if( Return_ValidKeyPressLCD() == '*' ){
+				  } 
+          else if( Return_ValidKeyPressLCD() == '*' )
+          {
 					  state = STATE_ENTER_DIGITS;
 				  	  break;
-			  	  }
+			  	}
 			  }
 
 		  case STATE_TIMER:
+        delay_us(250000); //delay for about 1 second
+        if(inputtedDigits[0]=='0' && inputtedDigits[1]=='0' 
+                && inputtedDigits[2]=='0' && inputtedDigits[3]=='0')
+        {
+          state= STATE_DONE;
+          break;
+        }
+        else if(inputtedDigits[3]>'0') //check ones (sec)
+        {
+          inputtedDigits[3]--; //decrement seconds count
+        }
+        else if(inputtedDigits[2]>'0') //check tens (sec)
+        {
+          inputtedDigits[2]--; //decrements tens (sec) 
+          inputtedDigits[3]='9'; //set ones(sec) to nine
+        }
+        else if(inputtedDigits[1]>'0') //check ones (min)
+        {
+          inputtedDigits[1]--;//decrement ones (min)
+          inputtedDigits[2]='5'; //set seconds to 59
+          inputtedDigits[3]='9';
+        }
+        else if(inputtedDigits[0]>'0') //check tens (min)
+        {
+          inputtedDigits[0]--;//decrement tens (min)
+          inputtedDigits[1]='9';//set ones (min) to 9
+          inputtedDigits[2]='5';//set seconds to 59
+          inputtedDigits[3]='9';
+        }
+        //update LCD display
+
 		  case STATE_DONE:
+        //output to LED
+        while(1){
+				  if( Return_ValidKeyPressLCD() == '#' || Return_ValidKeyPressLCD() == '*')
+          {
+            //turn off LED
+					  state =  STATE_ENTER_DIGITS;
+					  break;
+				  } 
+          else()
+          {
+            //nop
+			  	}
+			  }
 	   }
 
     }
-
-    /* USER CODE BEGIN 3 */
  }
-  /* USER CODE END 3 */
+
 
 
 /**

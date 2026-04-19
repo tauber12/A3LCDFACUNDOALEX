@@ -4,8 +4,6 @@
  *  Created on: Apr 15, 2026
  *      Author: alexm
  */
-
-// --------------------------------------------------- delay.c w/o #includes ---
 // configure SysTick timer for use with delay_us().
 // warning: breaks HAL_delay() by disabling interrupts for shorter delay timing.
 #include "delay.h"
