@@ -63,6 +63,7 @@ int main(void)
       }
     }
     //after 4 user inputs, parse them and update LCD if needed
+    //MAKE THIS INTO A FUNCTION IN LCD.C PROBABLY
     minutes= ((LCD_in[3]*10)+(LCD_in[2]));
     seconds= ((LCD_in[1]*10)+(LCD_in[0]));
     parse_flag=0;
@@ -86,7 +87,8 @@ int main(void)
       }
     if (parse_flag=1)
       {
-      uint8_t parsed_LCD_in[4]={};
+        //update MM:SS array here
+        //call function to update LCD
       }
     else
       {
