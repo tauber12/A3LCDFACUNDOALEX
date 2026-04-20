@@ -190,6 +190,7 @@ int main(void)
 	        		 }
 	        	  }
 	        	  delay_us(51200); // ~51.2ms delay per chunk (calibrated for 1s total)
+              LED_PORT -> BRR |= LED_PIN; // turn off LED to blink for one second
 	          }
 
 	          /* check if timer has reached 00:00 - transition to done state */
@@ -229,7 +230,7 @@ int main(void)
 	        		  break;
 	        	  }
 	          }
-
+            LED_PORT -> BSRR |= LED_PIN; // turn on LED to blink for one second
 	          Update_time(inputtedDigits); // update LCD with new countdown time
 	          state = STATE_TIMER;         // remain in timer state for next tick
 	          break;
@@ -241,7 +242,7 @@ int main(void)
 		  case STATE_DONE:
 
 			  LED_PORT -> BSRR |= LED_PIN; // turn on LED to signal timer completion
-
+        
 			  /* wait for '#' or '*' press to reset and return to digit entry */
 	          while(1){
 	        	  if( Return_ValidKeyPressLCD() == '#' || Return_ValidKeyPressLCD() == '*') {
