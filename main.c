@@ -16,6 +16,35 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
+/*
+ * EE 329 A3 LCD TIMER
+ *******************************************************************************
+ * @file           : main.c
+ * @brief          : main program body, FSM logic for LCD timer
+ * project         : EE 329 S'26 A3
+ * authors         : Alex Tauber
+ * version         : 0.1
+ * date            : 260415
+ * compiler        : STM32CubeIDE v.1.19.0 Build: 14980_20230301_1550 (UTC)
+ * target          : NUCLEO-L4A6ZG
+ * clocks          : 4 MHz MSI to AHB2
+ * @attention      : (c) 2026 STMicroelectronics.  All rights reserved.
+ *******************************************************************************
+ * MAIN PLAN :
+ * initialize system peripherals (LCD, keypad, SysTick, LED); display intro
+ * message; enter FSM loop. States: CHECKKEYPRESS waits for initial '*' press;
+ * ENTER_DIGITS prompts user for 4 timer digits, validates and caps at 59:59,
+ * waits for '#' to start or '*' to re-enter; TIMER counts down one second per
+ * iteration using calibrated for-loop delay, checks for '*' to reset, updates
+ * LCD each tick, transitions to DONE at 00:00; DONE illuminates LED and waits
+ * for any keypress to return to ENTER_DIGITS.
+ *******************************************************************************
+ *
+ *
+ *******************************************************************************
+ * Header format adapted from [Code Appendix by Kevin Vo] pg 5
+ */
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "lcd.h"
@@ -24,141 +53,206 @@
 
 void SystemClock_Config(void);
 
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
-
-typedef enum { //create states for FSM logic to aid  constant '*" checks
+/*-----------------------------------------------------------------------------
+ * typedef : State_t
+ * values  : STATE_CHECKKEYPRESS, STATE_ENTER_DIGITS, STATE_TIMER, STATE_DONE
+ * action  : defines FSM states for main loop switch decoder; enables constant
+ *           '*' detection across all states of operation
+ * authors : Alex Tauber
+ * date    : 260415
+ *----------------------------------------------------------------------------*/
+typedef enum {
     STATE_CHECKKEYPRESS,
     STATE_ENTER_DIGITS,
     STATE_TIMER,
     STATE_DONE
 } State_t;
 
+/*-----------------------------------------------------------------------------
+ * function : main( )
+ * INs      : none
+ * OUTs     : int (never returns)
+ * action   : initializes system peripherals; displays intro message; enters
+ *            infinite FSM loop decoding current state and executing
+ *            corresponding logic for LCD timer operation
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ *----------------------------------------------------------------------------*/
 int main(void)
 {
-  //sys intialization
+  /* system initialization */
   HAL_Init();
   SystemClock_Config();
   LCD_init();
   Keypad_Config();
   SysTick_Init();
+  LED_Config();
 
-  State_t state = STATE_CHECKKEYPRESS; // initialize first state
-  uint8_t inputtedDigits[4]; //create uint8_t array to store user inputs
+  State_t state = STATE_CHECKKEYPRESS; // initialize FSM to first state
+  uint8_t inputtedDigits[4];           // array to store 4 user-inputted digits
 
-  LCD_write_intro_message(); // EE329 A3 TIMER message
+  LCD_write_intro_message();           // display EE329 A3 TIMER intro message
 
-  while (1) //loop indefinitely
+  /* main FSM loop - runs indefinitely */
+  while (1)
   {
 	  delay_us(1000);
-	  switch(state){ //decode current state
+	  switch(state){ // decode current state
 
-	  	  case STATE_CHECKKEYPRESS: //check for keypress in this state
+	  	  /*-------------------------------------------------------------------------
+	  	   * STATE_CHECKKEYPRESS : wait for initial '*' keypress to begin timer entry
+	  	   * transitions to STATE_ENTER_DIGITS on '*' press; remains otherwise
+	  	   *------------------------------------------------------------------------*/
+	  	  case STATE_CHECKKEYPRESS:
 
-	  		  state =  (Return_ValidKeyPressLCD() == '*') ? STATE_ENTER_DIGITS : STATE_CHECKKEYPRESS; //wait for initial "*' press
+	  		  // wait for '*' press; transition to digit entry state if detected
+	  		  state = (Return_ValidKeyPressLCD() == '*') ? STATE_ENTER_DIGITS : STATE_CHECKKEYPRESS;
 	  		  break;
 
-		  case STATE_ENTER_DIGITS:  //prompt for timer digits, cap if above 59:59
+	  	  /*-------------------------------------------------------------------------
+	  	   * STATE_ENTER_DIGITS : prompt user for 4 timer digits; validate and cap
+	  	   * input at 59:59; wait for '#' to start timer or '*' to re-enter digits
+	  	   *------------------------------------------------------------------------*/
+		  case STATE_ENTER_DIGITS:
 
-			  Prompt_user_4_numbers();
-			  Wait_for_4_User_Digits(inputtedDigits);
+			  Prompt_user_4_numbers();              // display digit entry prompt on LCD
+			  Wait_for_4_User_Digits(inputtedDigits); // block until 4 valid digits entered
 
+			  /* validate inputted digits and cap at 59:59 if exceeded */
 			  if( inputtedDigits[0] > '5' && inputtedDigits[2] > '5' ) {
+
+				  /* both minutes tens and seconds tens exceed 5 - cap both to 59 */
 			      inputtedDigits[0] = '5';
 			      inputtedDigits[1] = '9';
 			      inputtedDigits[2] = '5';
-			      inputtedDigits[2] = '9';
+			      inputtedDigits[3] = '9';
 			      LCD_set_cursor(1, 11);
 			      LCD_write_string("59");
 			      LCD_set_cursor(1, 14);
 			      LCD_write_string("59");
 
 			  } else if( inputtedDigits[0] > '5' ) {
-				    inputtedDigits[0] = '5';
-				    inputtedDigits[1] = '9';
+
+				  /* minutes tens digit exceeds 5 - cap minutes to 59 */
+				  inputtedDigits[0] = '5';
+				  inputtedDigits[1] = '9';
 			      LCD_set_cursor(1, 11);
 			      LCD_write_string("59");
 
 			  } else if( inputtedDigits[2] > '5' ) {
-				    inputtedDigits[2] = '5';
-				    inputtedDigits[3] = '9';
+
+				  /* seconds tens digit exceeds 5 - cap seconds to 59 */
+				  inputtedDigits[2] = '5';
+				  inputtedDigits[3] = '9';
 			      LCD_set_cursor(1, 14);
 			      LCD_write_string("59");
 			  }
 
+			  /* wait for '#' to start timer or '*' to re-enter digits */
 			  while(1){
-				  if( Return_ValidKeyPressLCD() == '#' )
-          {
-					  state =  STATE_TIMER;
+
+				  uint8_t press = Return_ValidKeyPressLCD(); // block until valid keypress
+
+				  if( press == '#' ) {
+
+					  /* '#' detected - start timer, update LCD header, transition state */
+					  state = STATE_TIMER;
+					  LCD_set_cursor(0, 0);
+					  LCD_write_string("EE 329 A3 TIMER ");
 					  break;
-				  } 
-          else if( Return_ValidKeyPressLCD() == '*' )
-          {
+
+				  } else if( press == '*' ) {
+
+					  /* '*' detected - re-enter digit entry state */
 					  state = STATE_ENTER_DIGITS;
 				  	  break;
-			  	}
+			  	  }
 			  }
+			  break;
 
+	  	  /*-------------------------------------------------------------------------
+	  	   * STATE_TIMER : count down inputted time one second per iteration;
+	  	   * check for '*' each ~50ms chunk to minimize reset latency; update LCD
+	  	   * each tick; transition to STATE_DONE when 00:00 reached
+	  	   *------------------------------------------------------------------------*/
 		  case STATE_TIMER:
-        delay_us(250000); //delay for about 1 second
-        if(inputtedDigits[0]=='0' && inputtedDigits[1]=='0' 
-          && inputtedDigits[2]=='0' && inputtedDigits[3]=='0')
-        {
-          state= STATE_DONE;
-          break;
-        }
-        else if(inputtedDigits[3]>'0') //check ones (sec)
-        {
-          inputtedDigits[3]--; //decrement seconds count
-        }
-        else if(inputtedDigits[2]>'0') //check tens (sec)
-        {
-          inputtedDigits[2]--; //decrements tens (sec) 
-          inputtedDigits[3]='9'; //set ones(sec) to nine
-        }
-        else if(inputtedDigits[1]>'0') //check ones (min)
-        {
-          inputtedDigits[1]--;//decrement ones (min)
-          inputtedDigits[2]='5'; //set seconds to 59
-          inputtedDigits[3]='9';
-        }
-        else if(inputtedDigits[0]>'0') //check tens (min)
-        {
-          inputtedDigits[0]--;//decrement tens (min)
-          inputtedDigits[1]='9';//set ones (min) to 9
-          inputtedDigits[2]='5';//set seconds to 59
-          inputtedDigits[3]='9';
-        }
-        LCD_set_cursor(1,15); //update LCD with new coutdown time
-        LCD_write_char(inputtedDigits[3]);
-        LCD_set_cursor(1,14);
-        LCD_write_char(inputtedDigits[2]);
-        LCD_set_cursor(1,12);
-        LCD_write_char(inputtedDigits[1]);
-        LCD_set_cursor(1,11);
-        LCD_write_char(inputtedDigits[0]);
 
-		  case STATE_DONE:       
-        LED_PORT->BSRR = 0x10;//turn on LED
-        while(1){
-				  if( Return_ValidKeyPressLCD() == '#' || Return_ValidKeyPressLCD() == '*')
-          {
-            LED_PORT -> BRR =0x10;//turn off LED
-					  state =  STATE_ENTER_DIGITS;
-					  break;
-				  } 
-          else()
-          {
-            //nop
-			  	}
-			  }
-	   }
+			  /* calibrated for-loop delay for ~1 second total;
+			   * split into 17 x ~51.2ms chunks to allow '*' detection mid-second */
+	          for( uint16_t idx = 0; idx < 17; idx++){
 
-    }
- }
+	        	  /* check for '*' press each chunk - break immediately if detected */
+	        	  if( Keypad_IsAnyKeyPressed() ){
+	        		 if( Keypad_WhichKeyIsPressed() == 0xA ){
+	        			 state = STATE_ENTER_DIGITS;
+	        			 break;
+	        		 }
+	        	  }
+	        	  delay_us(51200); // ~51.2ms delay per chunk (calibrated for 1s total)
+	          }
 
+	          /* check if timer has reached 00:00 - transition to done state */
+	          if(inputtedDigits[0]=='0' && inputtedDigits[1]=='0'
+	            && inputtedDigits[2]=='0' && inputtedDigits[3]=='0'){
+
+	            state = STATE_DONE;
+	            break;
+
+	          /* decrement ones (sec) if nonzero */
+	          } else if(inputtedDigits[3]>'0'){
+	            inputtedDigits[3]--;
+
+	          /* decrement tens (sec), reset ones (sec) to 9 */
+	          } else if(inputtedDigits[2]>'0'){
+	            inputtedDigits[2]--;
+	            inputtedDigits[3]='9';
+
+	          /* decrement ones (min), reset seconds to 59 */
+	          } else if(inputtedDigits[1]>'0'){
+	            inputtedDigits[1]--;
+	            inputtedDigits[2]='5';
+	            inputtedDigits[3]='9';
+
+	          /* decrement tens (min), reset ones (min) to 9, reset seconds to 59 */
+	          } else if(inputtedDigits[0]>'0'){
+	            inputtedDigits[0]--;
+	            inputtedDigits[1]='9';
+	            inputtedDigits[2]='5';
+	            inputtedDigits[3]='9';
+	          }
+
+	          /* second '*' check after decrement logic - catches press during LCD update */
+	          if( Keypad_IsAnyKeyPressed() ){
+	        	  if( Return_ValidKeyPressLCD() == '*' ){
+	        		  state = STATE_ENTER_DIGITS;
+	        		  break;
+	        	  }
+	          }
+
+	          Update_time(inputtedDigits); // update LCD with new countdown time
+	          state = STATE_TIMER;         // remain in timer state for next tick
+	          break;
+
+	  	  /*-------------------------------------------------------------------------
+	  	   * STATE_DONE : timer has reached 00:00; illuminate LED; wait for any
+	  	   * keypress to turn off LED and return to digit entry state
+	  	   *------------------------------------------------------------------------*/
+		  case STATE_DONE:
+
+			  LED_PORT -> BSRR |= LED_PIN; // turn on LED to signal timer completion
+
+			  /* wait for '#' or '*' press to reset and return to digit entry */
+	          while(1){
+	        	  if( Return_ValidKeyPressLCD() == '#' || Return_ValidKeyPressLCD() == '*') {
+	        		  LED_PORT -> BRR |= LED_PIN; // turn off LED
+	        		  state = STATE_ENTER_DIGITS;
+	        		  break;
+	        	  }
+	          }
+	    }
+  }
+}
 
 /**
   * @brief System Clock Configuration
@@ -169,16 +263,11 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage
-  */
   if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1) != HAL_OK)
   {
     Error_Handler();
   }
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_MSI;
   RCC_OscInitStruct.MSIState = RCC_MSI_ON;
   RCC_OscInitStruct.MSICalibrationValue = 0;
@@ -189,8 +278,6 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_MSI;
@@ -204,37 +291,16 @@ void SystemClock_Config(void)
   }
 }
 
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
-
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
 void Error_Handler(void)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
   while (1)
   {
   }
-  /* USER CODE END Error_Handler_Debug */
 }
+
 #ifdef USE_FULL_ASSERT
-/**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
 void assert_failed(uint8_t *file, uint32_t line)
 {
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
