@@ -310,7 +310,7 @@ void Prompt_user_4_numbers( void ){
 	LCD_write_string("ENTER 4 DIGITS: "); // line 1: instruction prompt
 	LCD_set_cursor(1, 0);
 	LCD_write_string("MM:SS  ->  XX:XX"); // line 2: format template
-	LCD_set_cursor(1, 11);                // position cursor at first input digit
+	LCD_set_cursor(1, 16);                // position cursor at first input digit
 	LCD_command( 0xF );                   // display ON/OFF control: blinking cursor ON (D=1,C=1,B=1)
 
 }
@@ -330,7 +330,7 @@ void Prompt_user_4_numbers( void ){
  * usage    : called after each valid digit entry in Wait_for_4_User_Digits()
  *----------------------------------------------------------------------------*/
 void Update_entered_numbers( uint8_t nums[4] , uint8_t currentCnt ){
-
+    LCD_command(0x4);
 	LCD_set_cursor(1, 15);  // default position (overridden for cases 2-4)
 	delay_us(50);
 

@@ -177,8 +177,8 @@ int main(void)
 	  	   * each tick; transition to STATE_DONE when 00:00 reached
 	  	   *------------------------------------------------------------------------*/
 		  case STATE_TIMER:
-
-			  /* calibrated for-loop delay for ~1 second total;
+			  LED_PORT -> BRR |= LED_PIN; // turn off LED to blink for one second
+		  	  /* calibrated for-loop delay for ~1 second total;
 			   * split into 17 x ~51.2ms chunks to allow '*' detection mid-second */
 	          for( uint16_t idx = 0; idx < 17; idx++){
 
@@ -190,7 +190,7 @@ int main(void)
 	        		 }
 	        	  }
 	        	  delay_us(51200); // ~51.2ms delay per chunk (calibrated for 1s total)
-              LED_PORT -> BRR |= LED_PIN; // turn off LED to blink for one second
+				  LED_PORT -> BSRR |= LED_PIN; // turn on LED to blink for one second
 	          }
 
 	          /* check if timer has reached 00:00 - transition to done state */
