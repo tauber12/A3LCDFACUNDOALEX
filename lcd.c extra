@@ -347,7 +347,7 @@ void Update_entered_numbers( uint8_t nums[4] , uint8_t currentCnt ){
 
 	}
 }
-
+//
 /*-----------------------------------------------------------------------------
  * function : Wait_for_4_User_Digits( )
  * INs      : lcd_In[4] - caller-allocated array to store 4 ASCII digit inputs
