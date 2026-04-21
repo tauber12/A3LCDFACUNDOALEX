@@ -46,6 +46,7 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
+
 #include "main.h"
 #include "lcd.h"
 #include "keypad.h"
@@ -68,17 +69,6 @@ typedef enum {
     STATE_DONE
 } State_t;
 
-/*-----------------------------------------------------------------------------
- * function : main( )
- * INs      : none
- * OUTs     : int (never returns)
- * action   : initializes system peripherals; displays intro message; enters
- *            infinite FSM loop decoding current state and executing
- *            corresponding logic for LCD timer operation
- * authors  : Alex Tauber
- * version  : 0.1
- * date     : 260415
- *----------------------------------------------------------------------------*/
 int main(void)
 {
   /* system initialization */
@@ -190,7 +180,6 @@ int main(void)
 	        		 }
 	        	  }
 	        	  delay_us(51200); // ~51.2ms delay per chunk (calibrated for 1s total)
-              LED_PORT -> BRR |= LED_PIN; // turn off LED to blink for one second
 	          }
 
 	          /* check if timer has reached 00:00 - transition to done state */
@@ -230,7 +219,7 @@ int main(void)
 	        		  break;
 	        	  }
 	          }
-            LED_PORT -> BSRR |= LED_PIN; // turn on LED to blink for one second
+
 	          Update_time(inputtedDigits); // update LCD with new countdown time
 	          state = STATE_TIMER;         // remain in timer state for next tick
 	          break;
@@ -242,7 +231,7 @@ int main(void)
 		  case STATE_DONE:
 
 			  LED_PORT -> BSRR |= LED_PIN; // turn on LED to signal timer completion
-        delay_us(500000);//half second delay to signify end of count
+
 			  /* wait for '#' or '*' press to reset and return to digit entry */
 	          while(1){
 	        	  if( Return_ValidKeyPressLCD() == '#' || Return_ValidKeyPressLCD() == '*') {
@@ -250,7 +239,6 @@ int main(void)
 	        		  state = STATE_ENTER_DIGITS;
 	        		  break;
 	        	  }
-
 	          }
 	    }
   }
