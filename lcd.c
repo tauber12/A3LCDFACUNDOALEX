@@ -14,7 +14,7 @@
  *******************************************************************************
  * LCD PLAN :
  * configure PC0-PC7 as push-pull outputs for LCD data, control lines, and LED;
- * initialize HD44780-compatible LCD (NHD-0216HZ-FSW-FBW-33V3C) in 4-bit mode
+ * initialize LCD (NHD-0216HZ-FSW-FBW-33V3C) in 4-bit mode
  * via wake-up sequence and function set commands; implement command/data write
  * functions using EN pulse latching; provide cursor positioning, character and
  * string write functions; provide higher-level display functions for timer UI
@@ -23,16 +23,16 @@
  *******************************************************************************
  * LCD WIRING (4-bit mode, NHD-0216HZ-FSW-FBW-33V3C)
  *      peripheral – Nucleo I/O
- * LCD DB4  - PC0 = CN ? - OUT
- * LCD DB5  - PC1 = CN ? - OUT
- * LCD DB6  - PC2 = CN ? - OUT
- * LCD DB7  - PC3 = CN ? - OUT
- * LCD EN   - PC4 = CN ? - OUT  (0x10)
- * LCD RS   - PC6 = CN ? - OUT  (0x40)
- * LCD RW   - GND
+ * LCD DB4  - PC0 = CN9-3 - OUT
+ * LCD DB5  - PC1 = CN9-7 - OUT
+ * LCD DB6  - PC2 = CN10-9 - OUT
+ * LCD DB7  - PC3 = CN9-5 - OUT
+ * LCD EN   - PC4 = CN9-9 - OUT  (0x10)
+ * LCD RW   - PC5 = CN9-11 - OUT
+ * LCD RS   - PC6 = CN7-1 - OUT  (0x40)
  * LCD VDD  - 3.3V
  * LCD VSS  - GND
- * LCD LED+ - 5V via 120 ohm resistor
+ * LCD LED+ - 5V via 120 ohm resistor (3.0V ~15mA)
  * LCD LED- - GND
  *******************************************************************************
  * PIN DEFINITIONS (see lcd.h)
@@ -129,9 +129,6 @@ void LCD_init( void )  {
 	delay_us( 40 );
 	LCD_command( 0x06 );     // entry mode set: cursor increment, no display shift (I/D=1, SH=0)
 	delay_us( 40 );
-
-	LCD_command( 0xC );      // confirm display ON, no cursor
-	delay_us( 2000 );
 
 }
 
