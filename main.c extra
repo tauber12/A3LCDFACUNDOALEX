@@ -255,12 +255,12 @@ int main(void)
    					dance_count = 20;
    					while(dance_count>0){
     					LED_PORT -> BSRR |= LED_PIN;
-    					LED_PORT -> BSRR |= (0x20);
+    					LED_PORT -> BRR |= (0x20);
     					while(delay_count>0){
         					delay_count--;
     					}
     					LED_PORT -> BRR |= LED_PIN;
-    					LED_PORT -> BRR |= (0x20);
+    					LED_PORT -> BSRR |= (0x20);
     					dance_count--;
 				  }
 	          }
