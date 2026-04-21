@@ -88,7 +88,7 @@ int main(void)
   Keypad_Config();
   SysTick_Init();
   LED_Config();
-
+  
   State_t state = STATE_CHECKKEYPRESS; // initialize FSM to first state
   uint8_t inputtedDigits[4];           // array to store 4 user-inputted digits
 
@@ -250,7 +250,19 @@ int main(void)
 	        		  state = STATE_ENTER_DIGITS;
 	        		  break;
 	        	  }
-
+				  else(){
+					delay_count= 10000;
+   					dance_count = 20;
+   					while(dance_count>0){
+    					LED_PORT -> BSRR |= LED_PIN;
+    					LED_PORT -> BSRR |= (0x20);
+    					while(delay_count>0){
+        					delay_count--;
+    					}
+    					LED_PORT -> BRR |= LED_PIN;
+    					LED_PORT -> BRR |= (0x20);
+    					dance_count--;
+				  }
 	          }
 	    }
   }

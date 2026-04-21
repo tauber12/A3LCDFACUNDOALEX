@@ -62,14 +62,20 @@
  *----------------------------------------------------------------------------*/
 void LED_Config(void){
 
-	LED_PORT -> MODER   &= ~(GPIO_MODER_MODE8);         // clear mode bits PC8
-	LED_PORT -> MODER   |=  (GPIO_MODER_MODE8_0);       // set PC8 as GP output
-	LED_PORT -> OTYPER  &= ~(GPIO_OTYPER_OT8);          // push-pull output
-	LED_PORT -> PUPDR   &= ~(GPIO_PUPDR_PUPD8);         // no pull-up/pull-down
-	LED_PORT -> OSPEEDR |=  (3 << GPIO_OSPEEDR_OSPEED8_Pos); // very high speed
-	LED_PORT -> BRR     |=  (GPIO_PIN_8);               // preset LED off (LO)
-
-}
+	LED_PORT -> MODER   &= ~(GPIO_MODER_MODE8 | GPIO_MODER_MODE9 | GPIO_MODER_MODE10);       
+    // clear mode bits PC8
+	LED_PORT -> MODER   |=  (GPIO_MODER_MODE8_0 | GPIO_MODER_MODE9_0 | GPIO_MODER_MODE10_0); 
+    // set PC8 as GP output
+	LED_PORT -> OTYPER  &= ~(GPIO_OTYPER_OT8 | GPIO_OTYPER_OT9 | GPIO_OTYPER_OT10); 
+    // push-pull output
+	LED_PORT -> PUPDR   &= ~(GPIO_PUPDR_PUPD8 | GPIO_PUPDR_PUPD9 | GPIO_PUPDR_PUPD10); 
+    // no pull-up/pull-down
+	LED_PORT -> OSPEEDR |=  (3 << GPIO_OSPEEDR_OSPEED8_Pos
+                                | 3<< GPIO_OSPEEDR_OSPEED9_Pos 
+                                | 3<< GPIO_OSPEEDR_OSPEED10_Pos ); 
+    // very high speed
+	LED_PORT -> BRR     |=  (GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10); 
+    // preset LEDs off (LO)
 
 /*-----------------------------------------------------------------------------
  * function : LCD_init( )
@@ -442,4 +448,19 @@ void Update_time(uint8_t lcd_In[4]){
 	LCD_set_cursor(1, 11);          // tens (min)
 	LCD_write_char(lcd_In[0]);
 
+}
+
+void LED_DANCE(void){
+   delay_count= 10000;
+   dance_count = 20;
+   while(dance_count>0){
+    LED_PORT -> BSRR |= LED_PIN;
+    LED_PORT -> BSRR |= (0x20);
+    while(delay_count>0){
+        delay_count--;
+    }
+    LED_PORT -> BRR |= LED_PIN;
+    LED_PORT -> BRR |= (0x20);
+    dance_count--;
+   }
 }
