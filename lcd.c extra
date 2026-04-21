@@ -330,15 +330,17 @@ void Prompt_user_4_numbers( void ){
  * usage    : called after each valid digit entry in Wait_for_4_User_Digits()
  *----------------------------------------------------------------------------*/
 void Update_entered_numbers( uint8_t nums[4] , uint8_t currentCnt ){
-    LCD_command(0x4);
+   LCD_command(0x4);
 	LCD_set_cursor(1, 15);  // default position (overridden for cases 2-4)
 	delay_us(50);
 
 	switch(currentCnt){
 
 		case 1:  LCD_write_char(nums[currentCnt-1]); break; // write ones (sec) at col 15
-		case 2:  LCD_set_cursor(1, 14);                     // write ones (min) at col 14
-				 LCD_write_char(nums[currentCnt-1]); break;
+		case 2: LCD_set_cursor(1, 14);                   // write ones (min) at col 14
+				 LCD_write_char(nums[currentCnt-1]);
+				 LCD_set_cursor(1, 12);
+				 break;
 		case 3:  LCD_set_cursor(1, 12);                     // write tens (sec) at col 12
 				 LCD_write_char(nums[currentCnt-1]); break;
 		case 4:  LCD_set_cursor(1, 11);                     // write tens (min) at col 11
@@ -346,6 +348,7 @@ void Update_entered_numbers( uint8_t nums[4] , uint8_t currentCnt ){
 		default: break;
 
 	}
+	 LCD_command(0x6);
 }
 //
 /*-----------------------------------------------------------------------------

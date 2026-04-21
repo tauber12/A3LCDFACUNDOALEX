@@ -308,7 +308,7 @@ void Prompt_user_4_numbers( void ){
 	LCD_set_cursor(1, 0);
 	LCD_write_string("MM:SS  ->  XX:XX"); // line 2: format template
 	LCD_set_cursor(1, 11);                // position cursor at first input digit
-	LCD_command( 0xF );                   // display ON/OFF control: blinking cursor ON (D=1,C=1,B=1)
+	LCD_command( 0xF );  // display ON/OFF control: blinking cursor ON (D=1,C=1,B=1)
 
 }
 
