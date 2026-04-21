@@ -242,7 +242,7 @@ int main(void)
 		  case STATE_DONE:
 
 			  LED_PORT -> BSRR |= LED_PIN; // turn on LED to signal timer completion
-        
+        delay_us(500000);//half second delay to signify end of count
 			  /* wait for '#' or '*' press to reset and return to digit entry */
 	          while(1){
 	        	  if( Return_ValidKeyPressLCD() == '#' || Return_ValidKeyPressLCD() == '*') {
@@ -250,6 +250,7 @@ int main(void)
 	        		  state = STATE_ENTER_DIGITS;
 	        		  break;
 	        	  }
+
 	          }
 	    }
   }
