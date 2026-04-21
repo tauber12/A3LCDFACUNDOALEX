@@ -1,0 +1,442 @@
+/*
+ * EE 329 A3 LCD TIMER
+ *******************************************************************************
+ * @file           : lcd.c
+ * @brief          : LCD configuration, initialization, and display functions
+ * project         : EE 329 S'26 A3
+ * authors         : Alex Tauber
+ * version         : 0.1
+ * date            : 260415
+ * compiler        : STM32CubeIDE v.1.19.0 Build: 14980_20230301_1550 (UTC)
+ * target          : NUCLEO-L4A6ZG
+ * clocks          : 4 MHz MSI to AHB2
+ * @attention      : (c) 2026 STMicroelectronics.  All rights reserved.
+ *******************************************************************************
+ * LCD PLAN :
+ * configure PC0-PC7 as push-pull outputs for LCD data, control lines, and LED;
+ * initialize HD44780-compatible LCD (NHD-0216HZ-FSW-FBW-33V3C) in 4-bit mode
+ * via wake-up sequence and function set commands; implement command/data write
+ * functions using EN pulse latching; provide cursor positioning, character and
+ * string write functions; provide higher-level display functions for timer UI
+ * including intro message, digit entry prompt, digit update, and countdown
+ * display update.
+ *******************************************************************************
+ * LCD WIRING (4-bit mode, NHD-0216HZ-FSW-FBW-33V3C)
+ *      peripheral – Nucleo I/O
+ * LCD DB4  - PC0 = CN ? - OUT
+ * LCD DB5  - PC1 = CN ? - OUT
+ * LCD DB6  - PC2 = CN ? - OUT
+ * LCD DB7  - PC3 = CN ? - OUT
+ * LCD EN   - PC4 = CN ? - OUT  (0x10)
+ * LCD RS   - PC6 = CN ? - OUT  (0x40)
+ * LCD RW   - GND
+ * LCD VDD  - 3.3V
+ * LCD VSS  - GND
+ * LCD LED+ - 5V via 120 ohm resistor
+ * LCD LED- - GND
+ *******************************************************************************
+ * PIN DEFINITIONS (see lcd.h)
+ * LCD_EN        = 0x10 (PC4)
+ * LCD_RS        = 0x40 (PC6)
+ * LCD_DATA_BITS = 0x0F (PC0-PC3)
+ * LED_PORT      = GPIOC
+ * LED_PIN       = GPIO_PIN_8 (PC8)
+ *******************************************************************************
+ * Header format adapted from [Code Appendix by Kevin Vo] pg 5
+ */
+
+#include "lcd.h"
+#include "delay.h"
+#include "keypad.h"
+
+/*-----------------------------------------------------------------------------
+ * function : LED_Config( )
+ * INs      : none
+ * OUTs     : none
+ * action   : configures PC8 as general purpose push-pull output, no pull,
+ *            high speed; presets pin low (LED off)
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ * usage    : called in main.c before FSM loop to initialize LED output pin
+ *----------------------------------------------------------------------------*/
+void LED_Config(void){
+
+	LED_PORT -> MODER   &= ~(GPIO_MODER_MODE8);         // clear mode bits PC8
+	LED_PORT -> MODER   |=  (GPIO_MODER_MODE8_0);       // set PC8 as GP output
+	LED_PORT -> OTYPER  &= ~(GPIO_OTYPER_OT8);          // push-pull output
+	LED_PORT -> PUPDR   &= ~(GPIO_PUPDR_PUPD8);         // no pull-up/pull-down
+	LED_PORT -> OSPEEDR |=  (3 << GPIO_OSPEEDR_OSPEED8_Pos); // very high speed
+	LED_PORT -> BRR     |=  (GPIO_PIN_8);               // preset LED off (LO)
+
+}
+
+/*-----------------------------------------------------------------------------
+ * function : LCD_init( )
+ * INs      : none
+ * OUTs     : none
+ * action   : initializes SysTick timer; enables GPIOC clock; configures PC0-7
+ *            as push-pull outputs; executes HD44780 4-bit initialization
+ *            sequence: 40ms power-up wait, 3x wake-up commands, function set
+ *            to 4-bit/2-line/5x8, display ON, entry mode set auto-increment
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ * usage    : called once in main.c before FSM loop
+ *----------------------------------------------------------------------------*/
+void LCD_init( void )  {
+
+	SysTick_Init();                              // initialize SysTick timer for delay_us
+
+	/* enable GPIOC peripheral clock */
+	RCC -> AHB2ENR |= (RCC_AHB2ENR_GPIOCEN);
+
+	/* configure PC0-7 as general purpose push-pull outputs, no pull, high speed */
+	LCD_PORT -> MODER   &= ~(GPIO_MODER_MODE0 | GPIO_MODER_MODE1 | GPIO_MODER_MODE2 | GPIO_MODER_MODE3 |
+	                           GPIO_MODER_MODE4 | GPIO_MODER_MODE5 | GPIO_MODER_MODE6 | GPIO_MODER_MODE7);
+
+	LCD_PORT -> MODER   |=  (GPIO_MODER_MODE0_0 | GPIO_MODER_MODE1_0 | GPIO_MODER_MODE2_0 | GPIO_MODER_MODE3_0 |
+	                           GPIO_MODER_MODE4_0 | GPIO_MODER_MODE5_0 | GPIO_MODER_MODE6_0 | GPIO_MODER_MODE7_0);
+
+	LCD_PORT -> OTYPER  &= ~(GPIO_OTYPER_OT0 | GPIO_OTYPER_OT1 | GPIO_OTYPER_OT2 | GPIO_OTYPER_OT3 |
+	                           GPIO_OTYPER_OT4 | GPIO_OTYPER_OT5 | GPIO_OTYPER_OT6 | GPIO_OTYPER_OT7);
+
+	LCD_PORT -> PUPDR   &= ~(GPIO_PUPDR_PUPD0 | GPIO_PUPDR_PUPD1 | GPIO_PUPDR_PUPD2 | GPIO_PUPDR_PUPD3 |
+	                           GPIO_PUPDR_PUPD4 | GPIO_PUPDR_PUPD5 | GPIO_PUPDR_PUPD6 | GPIO_PUPDR_PUPD7);
+
+	LCD_PORT -> OSPEEDR |=  (3 << GPIO_OSPEEDR_OSPEED0_Pos) | (3 << GPIO_OSPEEDR_OSPEED1_Pos) |
+	                          (3 << GPIO_OSPEEDR_OSPEED2_Pos) | (3 << GPIO_OSPEEDR_OSPEED3_Pos) |
+	                          (3 << GPIO_OSPEEDR_OSPEED4_Pos) | (3 << GPIO_OSPEEDR_OSPEED5_Pos) |
+	                          (3 << GPIO_OSPEEDR_OSPEED6_Pos) | (3 << GPIO_OSPEEDR_OSPEED7_Pos);
+
+	/* preset all LCD pins low before init sequence */
+	LCD_PORT -> BRR     |=  (GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
+	                           GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
+
+	/* HD44780 initialization sequence - see datasheet flowchart */
+	delay_us( 40000 );                     // power-up wait > 40ms (VCC rise time)
+	for ( int idx = 0; idx < 3; idx++ ) {  // wake-up sequence: send 0x30 three times
+	   LCD_4b_command( 0x30 );             // DATA = 0011 XXXX (high nibble only)
+	   delay_us( 200 );                    // wait > 160us between wake-up commands
+	}
+
+	/* full 4-bit mode initialization sequence */
+	LCD_4b_command( 0x20 );  // function set #4: switch to 4-bit mode (DL=0)
+	delay_us( 40 );
+	LCD_command( 0x28 );     // function set: 4-bit, 2-line, 5x8 font (N=1, F=0)
+	delay_us( 40 );
+	LCD_command( 0x0C );     // display ON/OFF control: display ON, cursor OFF (D=1,C=0,B=0)
+	delay_us( 40 );
+	LCD_command( 0x06 );     // entry mode set: cursor increment, no display shift (I/D=1, SH=0)
+	delay_us( 40 );
+
+	LCD_command( 0xC );      // confirm display ON, no cursor
+	delay_us( 2000 );
+
+}
+
+/*-----------------------------------------------------------------------------
+ * function : LCD_pulse_ENA( )
+ * INs      : none
+ * OUTs     : none
+ * action   : generates falling edge pulse on EN line to latch data into LCD
+ *            controller; HD44780 latches on falling edge of EN
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ * usage    : called by LCD_4b_command() and LCD_command() after data is set
+ *----------------------------------------------------------------------------*/
+void LCD_pulse_ENA( void )  {
+
+	LCD_PORT->ODR |=  ( LCD_EN );   // EN = HI (setup time > 320ns before falling edge)
+	delay_us( 5 );
+	LCD_PORT->ODR &= ~( LCD_EN );   // EN = LO (LCD latches data on falling edge)
+	delay_us( 5 );                  // hold time after falling edge
+
+}
+
+/*-----------------------------------------------------------------------------
+ * function : LCD_4b_command( )
+ * INs      : command - 8-bit value; high nibble sent, low nibble ignored
+ * OUTs     : none
+ * action   : sends high nibble only to LCD data pins; used exclusively during
+ *            wake-up sequence when controller is still in 8-bit mode and
+ *            treats a single nibble as a complete 8-bit transfer
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ * usage    : called during LCD_init() wake-up sequence and 4-bit mode switch
+ *----------------------------------------------------------------------------*/
+void LCD_4b_command( uint8_t command )  {
+
+	LCD_PORT->ODR &= ~( LCD_DATA_BITS );  // clear data bits PC0-PC3
+	LCD_PORT->ODR |=  ( command >> 4 );   // place high nibble on data pins
+	delay_us( 5 );
+	LCD_pulse_ENA( );                     // latch nibble into controller
+
+}
+
+/*-----------------------------------------------------------------------------
+ * function : LCD_command( )
+ * INs      : command - full 8-bit instruction or data byte
+ * OUTs     : none
+ * action   : sends full byte to LCD in 4-bit mode as two sequential nibbles;
+ *            high nibble first then low nibble, each latched by EN pulse;
+ *            RS must be set by caller before invoking for data writes
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ * usage    : called by all LCD instruction and data write functions
+ *----------------------------------------------------------------------------*/
+void LCD_command( uint8_t command )  {
+
+	/* send high nibble */
+	LCD_PORT->ODR &= ~( LCD_DATA_BITS );                // clear data bits
+	LCD_PORT->ODR |=  ( (command>>4) & LCD_DATA_BITS ); // place high nibble on PC0-PC3
+	delay_us( 5 );
+	LCD_pulse_ENA( );                                   // latch high nibble
+
+	/* send low nibble */
+	LCD_PORT->ODR &= ~( LCD_DATA_BITS );                // clear data bits
+	LCD_PORT->ODR |=  ( command & LCD_DATA_BITS );      // place low nibble on PC0-PC3
+	delay_us( 5 );
+	LCD_pulse_ENA( );                                   // latch low nibble
+
+}
+
+/*-----------------------------------------------------------------------------
+ * function : LCD_write_char( )
+ * INs      : letter - ASCII character to display
+ * OUTs     : none
+ * action   : sets RS HI to signal data write (not command); calls LCD_command()
+ *            to send ASCII byte to DDRAM at current cursor address; restores
+ *            RS LO after write; AC auto-increments per entry mode set
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ * usage    : called by LCD_write_string() and directly for single character writes
+ *----------------------------------------------------------------------------*/
+void LCD_write_char( uint8_t letter )  {
+
+	LCD_PORT->ODR |=  (LCD_RS);   // RS = HI: data write to DDRAM
+	delay_us( 5 );
+	LCD_command( letter );        // send ASCII byte; AC auto-increments after write
+	LCD_PORT->ODR &= ~(LCD_RS);   // RS = LO: restore for next command
+
+}
+
+/*-----------------------------------------------------------------------------
+ * function : LCD_write_string( )
+ * INs      : string[] - null-terminated ASCII character array
+ * OUTs     : none
+ * action   : iterates through string array writing each character to LCD via
+ *            LCD_write_char(); AC auto-increment handles cursor advancement;
+ *            stops at null terminator
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ * usage    : called by display functions to write multi-character strings
+ *----------------------------------------------------------------------------*/
+void LCD_write_string( char string[] ) {
+
+	for( uint8_t idx = 0; idx < strlen(string); idx++ ){
+		LCD_write_char(string[idx]);
+		delay_us( 5 );
+	}
+
+}
+
+/*-----------------------------------------------------------------------------
+ * function : LCD_set_cursor( )
+ * INs      : row    - display row (0 = line 1, 1 = line 2)
+ *            column - display column (0-indexed, 0-15)
+ * OUTs     : none
+ * action   : sets DDRAM address counter to target position via Set DDRAM
+ *            Address command (0x80 | addr); line 1 base = 0x00,
+ *            line 2 base = 0x40
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ * usage    : called before any write operation requiring specific positioning
+ *----------------------------------------------------------------------------*/
+void LCD_set_cursor( uint8_t row, uint8_t column) {
+
+	/* line 2 offset = 0x40; line 1 offset = 0x00 */
+	uint8_t addr = (row == 1) ? ( 0x40 + column ) : column;
+	LCD_command( 0x80 | addr );  // set DDRAM address command
+
+}
+
+/*-----------------------------------------------------------------------------
+ * function : LCD_write_intro_message( )
+ * INs      : none
+ * OUTs     : none
+ * action   : writes intro message to LCD:
+ *            line 1: "EE 329 A3 TIMER "
+ *            line 2: "*=SET #=GO 00:00"
+ *            returns cursor to home position after write
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ * usage    : called once in main.c after LCD_init() on power-up
+ *----------------------------------------------------------------------------*/
+void LCD_write_intro_message( void ) {
+
+	LCD_set_cursor(0, 0);
+	LCD_write_string("EE 329 A3 TIMER ");  // line 1: project identifier
+	LCD_set_cursor(1, 0);
+	LCD_write_string("*=SET #=GO 00:00"); // line 2: control hints and default time
+	LCD_set_cursor(0, 0);                  // return cursor to home position
+
+}
+
+/*-----------------------------------------------------------------------------
+ * function : Prompt_user_4_numbers( )
+ * INs      : none
+ * OUTs     : none
+ * action   : writes digit entry prompt to LCD:
+ *            line 1: "ENTER 4 DIGITS: "
+ *            line 2: "MM:SS  ->  XX:XX"
+ *            positions cursor at column 11 (first input digit);
+ *            enables blinking cursor to guide user input
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ * usage    : called at start of STATE_ENTER_DIGITS and on '*' reset
+ *----------------------------------------------------------------------------*/
+void Prompt_user_4_numbers( void ){
+
+	LCD_set_cursor(0, 0);
+	LCD_write_string("ENTER 4 DIGITS: "); // line 1: instruction prompt
+	LCD_set_cursor(1, 0);
+	LCD_write_string("MM:SS  ->  XX:XX"); // line 2: format template
+	LCD_set_cursor(1, 11);                // position cursor at first input digit
+	LCD_command( 0xF );                   // display ON/OFF control: blinking cursor ON (D=1,C=1,B=1)
+
+}
+
+/*-----------------------------------------------------------------------------
+ * function : Update_entered_numbers( )
+ * INs      : nums[]     - array of ASCII digit characters entered so far
+ *            currentCnt - number of digits entered (1-4)
+ * OUTs     : none
+ * action   : updates LCD at correct position for each digit entry;
+ *            digits 1,2 map to columns 11,12 (tens/ones minutes);
+ *            digits 3,4 map to columns 14,15 (tens/ones seconds);
+ *            column 13 reserved for ':' separator (not overwritten)
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ * usage    : called after each valid digit entry in Wait_for_4_User_Digits()
+ *----------------------------------------------------------------------------*/
+void Update_entered_numbers( uint8_t nums[4] , uint8_t currentCnt ){
+
+	LCD_set_cursor(1, 15);  // default position (overridden for cases 2-4)
+	delay_us(50);
+
+	switch(currentCnt){
+
+		case 1:  LCD_write_char(nums[currentCnt-1]); break; // write ones (sec) at col 15
+		case 2:  LCD_set_cursor(1, 14);                     // write ones (min) at col 14
+				 LCD_write_char(nums[currentCnt-1]); break;
+		case 3:  LCD_set_cursor(1, 12);                     // write tens (sec) at col 12
+				 LCD_write_char(nums[currentCnt-1]); break;
+		case 4:  LCD_set_cursor(1, 11);                     // write tens (min) at col 11
+				 LCD_write_char(nums[currentCnt-1]); break;
+		default: break;
+
+	}
+}
+
+/*-----------------------------------------------------------------------------
+ * function : Wait_for_4_User_Digits( )
+ * INs      : lcd_In[4] - caller-allocated array to store 4 ASCII digit inputs
+ * OUTs     : none (fills lcd_In[] in place)
+ * action   : clears input array; loops until 4 valid digit inputs received;
+ *            '*' resets count and re-prompts; '#' ignored during entry;
+ *            updates LCD after each valid digit press; waits for key release
+ *            before accepting next input; after 4 digits displays confirm
+ *            prompt and disables blinking cursor
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ * usage    : called in STATE_ENTER_DIGITS; fills inputtedDigits[] for timer
+ *----------------------------------------------------------------------------*/
+void Wait_for_4_User_Digits(uint8_t lcd_In[4]){
+
+	uint8_t press_Cnt = 0;    // track number of valid digit inputs received
+	memset( lcd_In, 0, 4 );   // clear input array before collection begins
+
+	while( press_Cnt < 4 ) {  // loop until all 4 digits received
+
+		lcd_In[ press_Cnt ] = Return_ValidKeyPressLCD(); // block until valid keypress
+
+		if( lcd_In[ press_Cnt ] == '*' ){
+
+			/* '*' detected - reset collection and re-display entry prompt */
+			press_Cnt = 0;
+			memset( lcd_In, 0, 4 );
+			Prompt_user_4_numbers();
+			continue;
+
+		} else if ( lcd_In[press_Cnt] == '#' ) {
+
+			continue; // '#' ignored during digit entry
+
+		} else {
+
+			/* valid digit - store, update count, update LCD display */
+			press_Cnt++;
+			delay_us(1000);
+			Update_entered_numbers( lcd_In, press_Cnt );
+
+			/* after 2nd digit, reposition cursor to tens (sec) column */
+			if( press_Cnt == 2 ){
+				LCD_set_cursor(1, 14);
+			}
+
+			/* wait for key release before accepting next input (debounce) */
+			while( Keypad_IsAnyKeyPressed() != 0 ){}
+
+		}
+	}
+
+	/* all 4 digits received - display confirm prompt, disable blinking cursor */
+	LCD_set_cursor(0, 0);
+	LCD_write_string("# -> BEGIN      "); // line 1: confirm prompt
+	LCD_set_cursor(1, 0);
+	LCD_write_string("* -> RESET");       // line 2: reset option
+	LCD_set_cursor(1, 16);
+	LCD_command( 0xC );                   // display ON/OFF control: cursor OFF (D=1,C=0,B=0)
+
+}
+
+/*-----------------------------------------------------------------------------
+ * function : Update_time( )
+ * INs      : lcd_In[4] - array of 4 ASCII digit characters representing
+ *                        current countdown time [MM tens, MM ones, SS tens, SS ones]
+ * OUTs     : none
+ * action   : writes all 4 countdown digits to correct LCD positions;
+ *            ones (sec) at col 15, tens (sec) at col 14,
+ *            ones (min) at col 12, tens (min) at col 11;
+ *            small delays between writes for LCD stability
+ * authors  : Alex Tauber
+ * version  : 0.1
+ * date     : 260415
+ * usage    : called each iteration of STATE_TIMER after decrement logic
+ *----------------------------------------------------------------------------*/
+void Update_time(uint8_t lcd_In[4]){
+
+	LCD_set_cursor(1, 15);          // ones (sec)
+	LCD_write_char(lcd_In[3]);
+	delay_us(500);
+	LCD_set_cursor(1, 14);          // tens (sec)
+	LCD_write_char(lcd_In[2]);
+	delay_us(500);
+	LCD_set_cursor(1, 12);          // ones (min)
+	LCD_write_char(lcd_In[1]);
+	delay_us(500);
+	LCD_set_cursor(1, 11);          // tens (min)
+	LCD_write_char(lcd_In[0]);
+
+}

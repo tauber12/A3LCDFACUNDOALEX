@@ -250,9 +250,7 @@ int main(void)
 	        		  state = STATE_ENTER_DIGITS;
 	        		  break;
 	        	  }
-              else(){//LED dance
-                
-              }
+
 	          }
 	    }
   }
