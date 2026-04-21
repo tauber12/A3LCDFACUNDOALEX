@@ -230,7 +230,6 @@ int main(void)
 	        		  break;
 	        	  }
 	          }
-            LED_PORT -> BSRR |= LED_PIN; // turn on LED to blink for one second
 	          Update_time(inputtedDigits); // update LCD with new countdown time
 	          state = STATE_TIMER;         // remain in timer state for next tick
 	          break;
