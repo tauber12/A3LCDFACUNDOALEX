@@ -330,7 +330,7 @@ void Prompt_user_4_numbers( void ){
  * usage    : called after each valid digit entry in Wait_for_4_User_Digits()
  *----------------------------------------------------------------------------*/
 void Update_entered_numbers( uint8_t nums[4] , uint8_t currentCnt ){
-   LCD_command(0x4);
+    LCD_command(0x4);
 	LCD_set_cursor(1, 15);  // default position (overridden for cases 2-4)
 	delay_us(50);
 
