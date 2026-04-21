@@ -14,7 +14,7 @@
  *******************************************************************************
  * LCD PLAN :
  * configure PC0-PC7 as push-pull outputs for LCD data, control lines, and LED;
- * initialize HD44780-compatible LCD (NHD-0216HZ-FSW-FBW-33V3C) in 4-bit mode
+ * initialize LCD (NHD-0216HZ-FSW-FBW-33V3C) in 4-bit mode
  * via wake-up sequence and function set commands; implement command/data write
  * functions using EN pulse latching; provide cursor positioning, character and
  * string write functions; provide higher-level display functions for timer UI
@@ -23,16 +23,16 @@
  *******************************************************************************
  * LCD WIRING (4-bit mode, NHD-0216HZ-FSW-FBW-33V3C)
  *      peripheral – Nucleo I/O
- * LCD DB4  - PC0 = CN ? - OUT
- * LCD DB5  - PC1 = CN ? - OUT
- * LCD DB6  - PC2 = CN ? - OUT
- * LCD DB7  - PC3 = CN ? - OUT
- * LCD EN   - PC4 = CN ? - OUT  (0x10)
- * LCD RS   - PC6 = CN ? - OUT  (0x40)
- * LCD RW   - GND
+ * LCD DB4  - PC0 = CN9-3 - OUT
+ * LCD DB5  - PC1 = CN9-7 - OUT
+ * LCD DB6  - PC2 = CN10-9 - OUT
+ * LCD DB7  - PC3 = CN9-5 - OUT
+ * LCD EN   - PC4 = CN9-9 - OUT  (0x10)
+ * LCD RW   - PC5 = CN9-11 - OUT
+ * LCD RS   - PC6 = CN7-1 - OUT  (0x40)
  * LCD VDD  - 3.3V
  * LCD VSS  - GND
- * LCD LED+ - 5V via 120 ohm resistor
+ * LCD LED+ - 5V via 120 ohm resistor (3.0V ~15mA)
  * LCD LED- - GND
  *******************************************************************************
  * PIN DEFINITIONS (see lcd.h)
@@ -62,20 +62,21 @@
  *----------------------------------------------------------------------------*/
 void LED_Config(void){
 
-	LED_PORT -> MODER   &= ~(GPIO_MODER_MODE8 | GPIO_MODER_MODE9 | GPIO_MODER_MODE10);       
+	LED_PORT -> MODER   &= ~(GPIO_MODER_MODE8 | GPIO_MODER_MODE9 | GPIO_MODER_MODE10);
     // clear mode bits PC8
-	LED_PORT -> MODER   |=  (GPIO_MODER_MODE8_0 | GPIO_MODER_MODE9_0 | GPIO_MODER_MODE10_0); 
+	LED_PORT -> MODER   |=  (GPIO_MODER_MODE8_0 | GPIO_MODER_MODE9_0 | GPIO_MODER_MODE10_0);
     // set PC8 as GP output
-	LED_PORT -> OTYPER  &= ~(GPIO_OTYPER_OT8 | GPIO_OTYPER_OT9 | GPIO_OTYPER_OT10); 
+	LED_PORT -> OTYPER  &= ~(GPIO_OTYPER_OT8 | GPIO_OTYPER_OT9 | GPIO_OTYPER_OT10);
     // push-pull output
-	LED_PORT -> PUPDR   &= ~(GPIO_PUPDR_PUPD8 | GPIO_PUPDR_PUPD9 | GPIO_PUPDR_PUPD10); 
+	LED_PORT -> PUPDR   &= ~(GPIO_PUPDR_PUPD8 | GPIO_PUPDR_PUPD9 | GPIO_PUPDR_PUPD10);
     // no pull-up/pull-down
 	LED_PORT -> OSPEEDR |=  (3 << GPIO_OSPEEDR_OSPEED8_Pos
-                                | 3<< GPIO_OSPEEDR_OSPEED9_Pos 
-                                | 3<< GPIO_OSPEEDR_OSPEED10_Pos ); 
+                                | 3<< GPIO_OSPEEDR_OSPEED9_Pos
+                                | 3<< GPIO_OSPEEDR_OSPEED10_Pos );
     // very high speed
-	LED_PORT -> BRR     |=  (GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10); 
+	LED_PORT -> BRR     |=  (GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10);
     // preset LEDs off (LO)
+}
 
 /*-----------------------------------------------------------------------------
  * function : LCD_init( )
@@ -316,7 +317,7 @@ void Prompt_user_4_numbers( void ){
 	LCD_write_string("ENTER 4 DIGITS: "); // line 1: instruction prompt
 	LCD_set_cursor(1, 0);
 	LCD_write_string("MM:SS  ->  XX:XX"); // line 2: format template
-	LCD_set_cursor(1, 16);                // position cursor at first input digit
+	LCD_set_cursor(1, 15);                // position cursor at first input digit
 	LCD_command( 0xF );                   // display ON/OFF control: blinking cursor ON (D=1,C=1,B=1)
 
 }
@@ -336,25 +337,21 @@ void Prompt_user_4_numbers( void ){
  * usage    : called after each valid digit entry in Wait_for_4_User_Digits()
  *----------------------------------------------------------------------------*/
 void Update_entered_numbers( uint8_t nums[4] , uint8_t currentCnt ){
-    LCD_command(0x4);
+   LCD_command(0x4);
 	LCD_set_cursor(1, 15);  // default position (overridden for cases 2-4)
 	delay_us(50);
 
 	switch(currentCnt){
 
-		case 1:  LCD_write_char(nums[currentCnt-1]); break; // write ones (sec) at col 15
-		case 2: LCD_set_cursor(1, 14);                   // write ones (min) at col 14
-				 LCD_write_char(nums[currentCnt-1]);
-				 LCD_set_cursor(1, 12);
-				 break;
-		case 3:  LCD_set_cursor(1, 12);                     // write tens (sec) at col 12
-				 LCD_write_char(nums[currentCnt-1]); break;
-		case 4:  LCD_set_cursor(1, 11);                     // write tens (min) at col 11
-				 LCD_write_char(nums[currentCnt-1]); break;
+		case 1:  LCD_write_char(nums[4-currentCnt]); break; // write ones (sec) at col 15
+		case 2:  LCD_set_cursor(1, 14); LCD_write_char(nums[4-currentCnt]); break; // write ones (min) at col 14
+		case 3:  LCD_set_cursor(1, 12);  LCD_write_char(nums[4-currentCnt]); break;                   // write tens (sec) at col 12
+		case 4:  LCD_set_cursor(1, 11);   LCD_write_char(nums[4-currentCnt]); break;                   // write tens (min) at col 11
+
 		default: break;
 
 	}
-	 LCD_command(0x6);
+
 }
 //
 /*-----------------------------------------------------------------------------
@@ -376,14 +373,15 @@ void Wait_for_4_User_Digits(uint8_t lcd_In[4]){
 	uint8_t press_Cnt = 0;    // track number of valid digit inputs received
 	memset( lcd_In, 0, 4 );   // clear input array before collection begins
 
-	while( press_Cnt < 4 ) {  // loop until all 4 digits received
+	while( press_Cnt < 4) {  // loop until all 4 digits received
 
-		lcd_In[ press_Cnt ] = Return_ValidKeyPressLCD(); // block until valid keypress
+		lcd_In[ 3 - press_Cnt ] = Return_ValidKeyPressLCD(); // block until valid keypress
 
-		if( lcd_In[ press_Cnt ] == '*' ){
+		if( lcd_In[ 3 - press_Cnt ] == '*' ){
 
 			/* '*' detected - reset collection and re-display entry prompt */
 			press_Cnt = 0;
+			LCD_command(0x6);
 			memset( lcd_In, 0, 4 );
 			Prompt_user_4_numbers();
 			continue;
@@ -401,7 +399,7 @@ void Wait_for_4_User_Digits(uint8_t lcd_In[4]){
 
 			/* after 2nd digit, reposition cursor to tens (sec) column */
 			if( press_Cnt == 2 ){
-				LCD_set_cursor(1, 14);
+				LCD_set_cursor(1, 12);
 			}
 
 			/* wait for key release before accepting next input (debounce) */
@@ -411,6 +409,7 @@ void Wait_for_4_User_Digits(uint8_t lcd_In[4]){
 	}
 
 	/* all 4 digits received - display confirm prompt, disable blinking cursor */
+	LCD_command(0x6);
 	LCD_set_cursor(0, 0);
 	LCD_write_string("# -> BEGIN      "); // line 1: confirm prompt
 	LCD_set_cursor(1, 0);
@@ -448,19 +447,4 @@ void Update_time(uint8_t lcd_In[4]){
 	LCD_set_cursor(1, 11);          // tens (min)
 	LCD_write_char(lcd_In[0]);
 
-}
-
-void LED_DANCE(void){
-   delay_count= 10000;
-   dance_count = 20;
-   while(dance_count>0){
-    LED_PORT -> BSRR |= LED_PIN;
-    LED_PORT -> BSRR |= (0x20);
-    while(delay_count>0){
-        delay_count--;
-    }
-    LED_PORT -> BRR |= LED_PIN;
-    LED_PORT -> BRR |= (0x20);
-    dance_count--;
-   }
 }

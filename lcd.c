@@ -113,7 +113,7 @@ void LCD_init( void )  {
 	LCD_PORT -> BRR     |=  (GPIO_PIN_0 | GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 |
 	                           GPIO_PIN_4 | GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7);
 
-	/* HD44780 initialization sequence - see datasheet flowchart */
+	/* LCD initialization sequence - see datasheet flowchart */
 	delay_us( 40000 );                     // power-up wait > 40ms (VCC rise time)
 	for ( int idx = 0; idx < 3; idx++ ) {  // wake-up sequence: send 0x30 three times
 	   LCD_4b_command( 0x30 );             // DATA = 0011 XXXX (high nibble only)
@@ -279,11 +279,12 @@ void LCD_set_cursor( uint8_t row, uint8_t column) {
  *----------------------------------------------------------------------------*/
 void LCD_write_intro_message( void ) {
 
+    //print out intro message on LCD
 	LCD_set_cursor(0, 0);
-	LCD_write_string("EE 329 A3 TIMER ");  // line 1: project identifier
+	LCD_write_string("EE 329 A3 TIMER ");  
 	LCD_set_cursor(1, 0);
-	LCD_write_string("*=SET #=GO 00:00"); // line 2: control hints and default time
-	LCD_set_cursor(0, 0);                  // return cursor to home position
+	LCD_write_string("*=SET #=GO 00:00"); 
+	LCD_set_cursor(0, 0);                  
 
 }
 
@@ -400,11 +401,11 @@ void Wait_for_4_User_Digits(uint8_t lcd_In[4]){
 
 	/* all 4 digits received - display confirm prompt, disable blinking cursor */
 	LCD_set_cursor(0, 0);
-	LCD_write_string("# -> BEGIN      "); // line 1: confirm prompt
+	LCD_write_string("# -> BEGIN      "); 
 	LCD_set_cursor(1, 0);
-	LCD_write_string("* -> RESET");       // line 2: reset option
+	LCD_write_string("* -> RESET");       
 	LCD_set_cursor(1, 16);
-	LCD_command( 0xC );                   // display ON/OFF control: cursor OFF (D=1,C=0,B=0)
+	LCD_command( 0xC );                   
 
 }
 

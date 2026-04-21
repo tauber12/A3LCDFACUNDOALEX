@@ -8,7 +8,7 @@
  * for LCD control pin masks, data bit mask, and port assignments for
  * NHD-0216HZ-FSW-FBW-33V3C 2x16 character LCD in 4-bit parallel mode
  * project         : EE 329 S'26 A3
- * authors         : Alex Tauber
+ * authors         : Alex Tauber & Facundo Soto-Wang
  * version         : 0.1
  * date            : 260415
  * compiler        : STM32CubeIDE v.1.19.0 Build: 14980_20230301_1550 (UTC)
@@ -20,8 +20,8 @@
  *      signal      – ODR bit mask – pin
  * LCD  DB4-DB7     – 0x0F         – PC0-PC3  (4-bit data bus, high nibble)
  * LCD  EN          – 0x10         – PC4      (enable, falling edge triggered)
+ * LCD  RW          – NOT USED     – PC5      (write only, set low)
  * LCD  RS          – 0x40         – PC6      (register select: 0=cmd, 1=data)
- * LCD  RW          – GND                     (write only, tied low)
  * LED              – 0x100        – PC8      (timer done indicator)
  *******************************************************************************
  * Header format adapted from [Code Appendix by Kevin Vo] pg 5
@@ -44,18 +44,32 @@
 #define LCD_DATA_BITS 0xF            // PC0-PC3 - 4-bit data bus (DB4-DB7)
 
 /* lcd.c function declarations */
-void LED_Config( void );                                    // configure PC8 as LED output
-void LCD_init( void );                                      // initialize LCD in 4-bit mode
-void LCD_pulse_ENA( void );                                 // generate EN falling edge pulse
-void LCD_4b_command( uint8_t command );                     // send high nibble only (wake-up)
-void LCD_command( uint8_t command );                        // send full byte in 4-bit mode
-void LCD_write_char( uint8_t letter );                      // write single ASCII character
-void LCD_write_string( char string[] );                     // write null-terminated string
-void LCD_set_cursor( uint8_t row, uint8_t column );         // set DDRAM address by row/column
-void LCD_write_intro_message( void );                       // display EE329 A3 TIMER intro
-void Prompt_user_4_numbers( void );                         // display digit entry prompt
-void Update_entered_numbers( uint8_t nums[4], uint8_t currentCnt ); // update LCD with each digit press
-void Wait_for_4_User_Digits( uint8_t lcd_In[4] );           // block until 4 digits entered
-void Update_time( uint8_t lcd_In[4] );                      // update LCD countdown display
+
+// configure PC8 as LED output
+void LED_Config( void );
+// initialize LCD in 4-bit mode
+void LCD_init( void );
+// generate EN falling edge pulse
+void LCD_pulse_ENA( void );
+// send high nibble only (wake-up)
+void LCD_4b_command( uint8_t command );
+// send full byte in 4-bit mode
+void LCD_command( uint8_t command );
+// write single ASCII character
+void LCD_write_char( uint8_t letter );
+// write null-terminated string
+void LCD_write_string( char string[] );
+// set DDRAM address by row/column
+void LCD_set_cursor( uint8_t row, uint8_t column );
+// display EE329 A3 TIMER intro
+void LCD_write_intro_message( void );
+// display digit entry prompt
+void Prompt_user_4_numbers( void );
+// update LCD with each digit press
+void Update_entered_numbers( uint8_t nums[4], uint8_t currentCnt );
+// block until 4 digits entered
+void Wait_for_4_User_Digits( uint8_t lcd_In[4] );
+// update LCD countdown display
+void Update_time( uint8_t lcd_In[4] );
 
 #endif /* INC_LCD_H_ */
